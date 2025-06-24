@@ -1,98 +1,32 @@
-<!-- Introduction -->
-# What Are Azure Disks?
-* Azure Disks are block-level storage volumes managed by Azure.
-* In AKS, they are commonly used as persistent storage for individual Pods.
+<!-- AKS -->
+# What is AKS?
+AKS (Azure Kubernetes Service) is a platform where you can run your containers (like small, packaged apps). It's like a smart system that automatically manages your applications.
 
-<!-- Key Concepts -->
-## Key Concepts
-| Term | Description |
-|------|-------------|
-| Managed Disk | A virtual hard disk (VHD) managed by Azure. Types: Premium SSD, Standard SSD, Standard HDD, and Ultra SSD | 
-| PersistentVolume (PV) | A K8s abstraction of a storage resource |
-| PersistentVolumeClaim (PVC) | A user's request for storage (size, access mode, etc.) |
-| StorageClass | Defines how volumes are provisioned (disk type, replication, etc.) |
+<!-- Why do we need storage in AKS? -->
+## Why do we need storage in AKS?
+Containers are temporary – if they restart, any files they stored vanish. So we need storage that keeps data safe and permanent, even if the container stops.
 
-<!-- Why to Use -->
-## Why Use Azure Disks in AKS?
-* ✅ Highly available and durable
-* ✅ Managed by Azure (no manual provisioning)
-* ✅ Great for stateful apps like databases
-* ❌ Can be attached to only one Pod at a time (unless using Azure Disk CSI driver with shared disks)
+<!-- What is Azure Disk? -->
+## What is Azure Disk?
+Azure Disk is like a virtual hard drive you can attach to your AKS containers. It stores files just like a normal disk on your laptop or server.
 
-<!-- Typical Architecture -->
-## Typical Architecture
-```
-Pod → PVC → StorageClass → Azure Managed Disk
-```
+<!-- How Azure Disk works with AKS -->
+## How Azure Disk works with AKS
+1. You create a disk (e.g., 100 GB).
+2. You attach it to a container (actually to a Kubernetes pod).
+3. The pod can then read and write files to that disk.
+4. If the pod restarts, the disk is still there – data is safe.
+5. If the pod moves to another node, Azure can re-attach the disk.
 
-<!-- StorageClass -->
-## StorageClass Example (Azure Disk)
-```
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: azure-disk-sc
-provisioner: disk.csi.azure.com
-parameters:
-  skuName: Premium_LRS      # or StandardSSD_LRS, UltraSSD_LRS, etc.
-  kind: Managed
-reclaimPolicy: Delete
-volumeBindingMode: WaitForFirstConsume
-```
+<!-- Key Points -->
+## Key Points
+* Azure Disk is best for single-writer pods (only one pod writes to it at a time).
+* It’s fast and good for things like databases.
+* For shared access by many pods, use Azure Files instead.
 
-<!-- PVC -->
-## PVC Example
-```
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: azure-disk-pvc
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 10Gi
-  storageClassName: azure-disk-sc
-```
-
-<!-- 🧩 Mount to Pod -->
-## Mount to Pod
-```
-apiVersion: v1
-kind: Pod
-metadata:
-  name: disk-demo
-spec:
-  containers:
-    - name: nginx
-      image: nginx
-      volumeMounts:
-        - mountPath: "/mnt/data"
-          name: disk-storage
-  volumes:
-    - name: disk-storage
-      persistentVolumeClaim:
-        claimName: azure-disk-pvc
-```
-
-<!-- Important Notes -->
-## Important Notes
-| Item | Details |
-|------|---------|
-| ReadWriteOnce (RWO) | Azure Disks can only be mounted to one node at a time unless using shared disks |
-| Availability Zones | Make sure your disk and node pool are in the same zone |
-| CSI Driver | Azure Disk uses the CSI driver (disk.csi.azure.com) by default in AKS |
-
-<!-- Use Case -->
-## ✅ Use Cases
-* SQL databases (SQL Server, MySQL, PostgreSQL)
-* MongoDB, Redis (if not using managed services)
-* Apps that need dedicated, persistent storage per replica
-
-<!-- 🔁 Cleanup -->
-## When the Pod is deleted:
-* If the PVC is deleted and ```reclaimPolicy: Delete```, the Azure Disk is deleted automatically.
-* Otherwise, it stays in your Azure subscription as an orphaned resource (can be deleted manually).
-
-<!--  -->
+<!-- Summary -->
+## Summary
+Think of Azure Disk like a USB drive:
+* You plug it into your container.
+* It keeps data safe.
+* It's managed by Azure so you don’t have to worry about hardware.
